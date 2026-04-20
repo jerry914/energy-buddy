@@ -1,3 +1,5 @@
+import type { Translations } from '../i18n/locales'
+
 export type DayPlan = 'fullCapacity' | 'moderate' | 'restDay'
 
 export function suggestedPlan(capacity: number): DayPlan {
@@ -6,14 +8,11 @@ export function suggestedPlan(capacity: number): DayPlan {
   return 'restDay'
 }
 
-export function suggestionText(plan: DayPlan): string {
+export function suggestionText(plan: DayPlan, t: Translations): string {
   switch (plan) {
-    case 'fullCapacity':
-      return '適合 1 件高強度 + 2 件中強度'
-    case 'moderate':
-      return '適合 1 件高強度 + 1 件中強度 + 1 件低強度'
-    case 'restDay':
-      return '今天適合慢慢來，以低強度任務為主'
+    case 'fullCapacity': return t.planFull
+    case 'moderate': return t.planModerate
+    case 'restDay': return t.planRest
   }
 }
 
@@ -27,29 +26,30 @@ export function generateReminders(
   capacity: number,
   highTaskCount: number,
   actualUsed: number,
+  t: Translations,
 ): string[] {
   const reminders: string[] = []
 
   if (highTaskCount >= 2) {
-    reminders.push('你今天已經排了多個高強度任務，下午建議不要再加新的 deep work。')
+    reminders.push(t.reminderHighMultiple)
   } else if (highTaskCount === 1) {
-    reminders.push('你今天已經排了 1 個高強度任務，下午建議不要再加新的 deep work。')
+    reminders.push(t.reminderHighOne)
   }
 
   if (capacity < 5) {
-    reminders.push('今天精力偏低，安排一件最重要的事就很好。')
+    reminders.push(t.reminderLowCapacity)
   }
 
   if (actualUsed > capacity * 0.8 && actualUsed <= capacity) {
-    reminders.push('精力快到上限了，剩下的時間做輕鬆的事吧。')
+    reminders.push(t.reminderNearLimit)
   }
 
   if (actualUsed > capacity) {
-    reminders.push('今天已經超載了，好好休息，明天再來。')
+    reminders.push(t.reminderOverloaded)
   }
 
   if (reminders.length === 0) {
-    reminders.push('如果下午累了，改做輕量任務也算有照顧進度。')
+    reminders.push(t.reminderDefault)
   }
 
   return reminders

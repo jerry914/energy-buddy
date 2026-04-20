@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { I18nProvider } from './i18n/context'
 import { BottomTabBar, type TabKey } from './components/BottomTabBar'
 import { CheckInModal } from './components/CheckInModal'
 import { HomePage } from './pages/HomePage'
@@ -7,7 +8,7 @@ import { InsightsPage } from './pages/InsightsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { useDailyEnergy } from './hooks/useDailyEnergy'
 
-export default function App() {
+function AppContent() {
   const [tab, setTab] = useState<TabKey>('home')
   const { needsCheckIn, checkIn } = useDailyEnergy()
 
@@ -22,5 +23,13 @@ export default function App() {
       </div>
       <BottomTabBar active={tab} onChange={setTab} />
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   )
 }

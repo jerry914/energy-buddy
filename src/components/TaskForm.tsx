@@ -1,25 +1,20 @@
 import { useState, useEffect } from 'react'
 import type { EBTask, Intensity, TaskCategory } from '../models/types'
 import { db } from '../db/database'
+import { useI18n } from '../i18n/context'
 
 const intensities: Intensity[] = ['high', 'medium', 'low']
-const intensityLabels: Record<Intensity, string> = { high: '高', medium: '中', low: '低' }
 const categories: TaskCategory[] = ['deepWork', 'meeting', 'admin', 'learning']
-const categoryLabels: Record<TaskCategory, string> = {
-  deepWork: '深度工作', meeting: '會議', admin: '行政', learning: '學習',
-}
 
 interface Preset {
   name: string
   duration: number
   intensity: Intensity
   category: TaskCategory
-  count: number
 }
 
 function usePresets(): Preset[] {
   const [presets, setPresets] = useState<Preset[]>([])
-
   useEffect(() => {
     async function load() {
       const all = await db.tasks.toArray()
@@ -33,20 +28,20 @@ function usePresets(): Preset[] {
           map.set(t.name, { task: t, count: 1 })
         }
       }
-      const sorted = [...map.values()]
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
-      setPresets(sorted.map(({ task, count }) => ({
-        name: task.name,
-        duration: task.duration,
-        intensity: task.intensity,
-        category: task.category,
-        count,
-      })))
+      setPresets(
+        [...map.values()]
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5)
+          .map(({ task }) => ({
+            name: task.name,
+            duration: task.duration,
+            intensity: task.intensity,
+            category: task.category,
+          }))
+      )
     }
     load()
   }, [])
-
   return presets
 }
 
@@ -59,6 +54,7 @@ export function TaskForm({
   onClose: () => void
   initial?: EBTask
 }) {
+  const { t } = useI18n()
   const [name, setName] = useState(initial?.name ?? '')
   const [duration, setDuration] = useState(initial?.duration ?? 1)
   const [intensity, setIntensity] = useState<Intensity>(initial?.intensity ?? 'medium')
@@ -66,6 +62,13 @@ export function TaskForm({
   const presets = usePresets()
 
   const isEdit = !!initial
+
+  const intensityLabels: Record<Intensity, string> = {
+    high: t.intensityHigh, medium: t.intensityMedium, low: t.intensityLow,
+  }
+  const categoryLabels: Record<TaskCategory, string> = {
+    deepWork: t.catDeepWork, meeting: t.catMeeting, admin: t.catAdmin, learning: t.catLearning,
+  }
 
   const applyPreset = (p: Preset) => {
     setName(p.name)
@@ -84,13 +87,13 @@ export function TaskForm({
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
       <div className="rounded-t-3xl sm:rounded-3xl bg-white shadow-lg border border-rose-100 p-6 w-full max-w-sm space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-stone-800">{isEdit ? '編輯任務' : '新增任務'}</h3>
+          <h3 className="text-lg font-semibold text-stone-800">{isEdit ? t.editTask : t.newTask}</h3>
           <button onClick={onClose} className="text-stone-400 text-xl">×</button>
         </div>
 
         {!isEdit && presets.length > 0 && (
           <div>
-            <label className="text-sm font-medium text-stone-700 block mb-2">常用任務</label>
+            <label className="text-sm font-medium text-stone-700 block mb-2">{t.frequentTasks}</label>
             <div className="flex flex-wrap gap-2">
               {presets.map((p) => (
                 <button
@@ -110,19 +113,19 @@ export function TaskForm({
         )}
 
         <div>
-          <label className="text-sm font-medium text-stone-700 block mb-1">任務名稱</label>
+          <label className="text-sm font-medium text-stone-700 block mb-1">{t.taskName}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例：寫論文、開會..."
+            placeholder={t.taskPlaceholder}
             className="w-full rounded-xl border border-stone-200 px-4 py-2.5 text-sm focus:outline-none focus:border-rose-300"
           />
         </div>
 
         <div>
           <label className="text-sm font-medium text-stone-700 block mb-1">
-            時數 <span className="text-rose-500">{duration}h</span>
+            {t.taskHours} <span className="text-rose-500">{duration}h</span>
           </label>
           <input
             type="range"
@@ -136,7 +139,7 @@ export function TaskForm({
         </div>
 
         <div>
-          <label className="text-sm font-medium text-stone-700 block mb-2">強度</label>
+          <label className="text-sm font-medium text-stone-700 block mb-2">{t.intensity}</label>
           <div className="flex gap-2">
             {intensities.map((i) => (
               <button
@@ -157,7 +160,7 @@ export function TaskForm({
         </div>
 
         <div>
-          <label className="text-sm font-medium text-stone-700 block mb-2">類型</label>
+          <label className="text-sm font-medium text-stone-700 block mb-2">{t.category}</label>
           <div className="grid grid-cols-2 gap-2">
             {categories.map((c) => (
               <button
@@ -178,7 +181,7 @@ export function TaskForm({
           disabled={!name.trim()}
           className="w-full rounded-full py-3 bg-rose-500 text-white font-medium shadow-sm hover:bg-rose-600 transition-colors disabled:opacity-40"
         >
-          {isEdit ? '儲存' : '新增'}
+          {isEdit ? t.save : t.add}
         </button>
       </div>
     </div>

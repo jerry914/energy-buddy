@@ -1,6 +1,6 @@
-import type { EBTask } from '../models/types'
-import { CATEGORY_LABELS } from '../models/types'
+import type { EBTask, TaskCategory } from '../models/types'
 import { IntensityChip } from './IntensityChip'
+import { useI18n } from '../i18n/context'
 
 export function TaskRowCard({
   task,
@@ -13,6 +13,14 @@ export function TaskRowCard({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useI18n()
+  const catLabels: Record<TaskCategory, string> = {
+    deepWork: t.catDeepWork,
+    meeting: t.catMeeting,
+    admin: t.catAdmin,
+    learning: t.catLearning,
+  }
+
   return (
     <div className={`rounded-2xl bg-stone-50 p-4 flex items-center justify-between transition-opacity ${task.isCompleted ? 'opacity-60' : ''}`}>
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
@@ -21,7 +29,7 @@ export function TaskRowCard({
           <IntensityChip intensity={task.intensity} />
         </div>
         <p className="text-sm mt-1 text-stone-600">
-          {CATEGORY_LABELS[task.category]} · {task.duration} 小時
+          {catLabels[task.category]} · {task.duration} {t.hours}
         </p>
       </div>
       <div className="flex items-center gap-2 ml-3">

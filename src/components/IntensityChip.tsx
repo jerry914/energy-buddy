@@ -1,5 +1,5 @@
 import type { Intensity } from '../models/types'
-import { INTENSITY_LABELS } from '../models/types'
+import { useI18n } from '../i18n/context'
 
 const styles: Record<Intensity, string> = {
   high: 'bg-rose-100 text-rose-700',
@@ -8,9 +8,15 @@ const styles: Record<Intensity, string> = {
 }
 
 export function IntensityChip({ intensity }: { intensity: Intensity }) {
+  const { t } = useI18n()
+  const labels: Record<Intensity, string> = {
+    high: t.intensityHigh,
+    medium: t.intensityMedium,
+    low: t.intensityLow,
+  }
   return (
     <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[intensity]}`}>
-      {INTENSITY_LABELS[intensity]}強度
+      {labels[intensity]}{t.intensitySuffix}
     </span>
   )
 }

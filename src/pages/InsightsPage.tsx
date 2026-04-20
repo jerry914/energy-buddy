@@ -1,62 +1,61 @@
-import { useState, useEffect } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { SoftCard } from '../components/SoftCard'
 import { InsightMessageCard } from '../components/InsightMessageCard'
+import { useI18n } from '../i18n/context'
 import { db } from '../db/database'
-import type { DailyEnergy } from '../models/types'
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell,
 } from 'recharts'
 
-interface WeekStats {
-  data: { day: string; score: number; overload: boolean }[]
-  avgCapacity: number
-  overloadDays: number
-  bestDay: string
+function getWeekDates(): string[] {
+  const today = new Date()
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(d.getDate() - (6 - i))
+    return d.toISOString().slice(0, 10)
+  })
 }
 
 export function InsightsPage() {
-  const [stats, setStats] = useState<WeekStats | null>(null)
+  const { t } = useI18n()
+  const weekDates = getWeekDates()
 
-  useEffect(() => {
-    async function load() {
-      const today = new Date()
-      const dayNames = ['日', '一', '二', '三', '四', '五', '六']
-      const data: WeekStats['data'] = []
-      let totalCapacity = 0
-      let overloadDays = 0
-      let bestScore = 0
-      let bestDay = ''
+  const stats = useLiveQuery(async () => {
+    const records = await db.dailyEnergy.where('date').anyOf(weekDates).toArray()
+    const map = new Map(records.map(r => [r.date, r]))
 
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today)
-        d.setDate(d.getDate() - i)
-        const dateStr = d.toISOString().slice(0, 10)
-        const record: DailyEnergy | undefined = await db.dailyEnergy.where('date').equals(dateStr).first()
-        const score = record ? Math.round(record.predictedEnergy) : 0
-        const overload = record?.overloadFlag ?? false
-
-        data.push({ day: dayNames[d.getDay()], score, overload })
-
-        if (record) {
-          totalCapacity += record.predictedEnergy / 10
-          if (overload) overloadDays++
-          if (score > bestScore) {
-            bestScore = score
-            bestDay = dayNames[d.getDay()]
-          }
-        }
+    const data = weekDates.map(dateStr => {
+      const d = new Date(dateStr + 'T00:00:00')
+      const record = map.get(dateStr)
+      return {
+        day: t.dayNames[d.getDay()],
+        score: record ? Math.round(record.predictedEnergy) : 0,
+        overload: record?.overloadFlag ?? false,
       }
+    })
 
-      const daysWithData = data.filter(d => d.score > 0).length
-      setStats({
-        data,
-        avgCapacity: daysWithData > 0 ? totalCapacity / daysWithData : 0,
-        overloadDays,
-        bestDay: bestDay || '-',
-      })
+    let totalCapacity = 0
+    let overloadDays = 0
+    let bestScore = 0
+    let bestDay = ''
+    for (const record of records) {
+      totalCapacity += record.predictedEnergy / 10
+      if (record.overloadFlag) overloadDays++
+      const score = Math.round(record.predictedEnergy)
+      if (score > bestScore) {
+        bestScore = score
+        const d = new Date(record.date + 'T00:00:00')
+        bestDay = t.dayNames[d.getDay()]
+      }
     }
-    load()
-  }, [])
+
+    return {
+      data,
+      avgCapacity: records.length > 0 ? totalCapacity / records.length : 0,
+      overloadDays,
+      bestDay: bestDay || '-',
+    }
+  }, [t])
 
   if (!stats) return null
 
@@ -65,14 +64,14 @@ export function InsightsPage() {
   return (
     <div className="space-y-4 pt-4">
       <div className="text-center">
-        <h2 className="text-2xl font-semibold text-stone-800">週報</h2>
-        <p className="text-sm text-stone-500 mt-1">觀察自己的節奏</p>
+        <h2 className="text-2xl font-semibold text-stone-800">{t.insightsTitle}</h2>
+        <p className="text-sm text-stone-500 mt-1">{t.insightsSub}</p>
       </div>
 
       {hasData ? (
         <>
           <SoftCard>
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">本週能量</h3>
+            <h3 className="text-lg font-semibold text-stone-800 mb-4">{t.weeklyEnergy}</h3>
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.data}>
@@ -92,35 +91,33 @@ export function InsightsPage() {
           </SoftCard>
 
           <SoftCard>
-            <h3 className="text-lg font-semibold text-stone-800 mb-3">本週摘要</h3>
+            <h3 className="text-lg font-semibold text-stone-800 mb-3">{t.weeklySummary}</h3>
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-2xl bg-rose-50 p-3 text-center">
-                <p className="text-xs text-stone-500">平均容量</p>
+                <p className="text-xs text-stone-500">{t.avgCapacity}</p>
                 <p className="text-lg font-semibold text-stone-800">{stats.avgCapacity.toFixed(1)}</p>
               </div>
               <div className="rounded-2xl bg-amber-50 p-3 text-center">
-                <p className="text-xs text-stone-500">超載天數</p>
+                <p className="text-xs text-stone-500">{t.overloadDays}</p>
                 <p className="text-lg font-semibold text-stone-800">{stats.overloadDays}</p>
               </div>
               <div className="rounded-2xl bg-emerald-50 p-3 text-center">
-                <p className="text-xs text-stone-500">最佳日</p>
-                <p className="text-lg font-semibold text-stone-800">週{stats.bestDay}</p>
+                <p className="text-xs text-stone-500">{t.bestDay}</p>
+                <p className="text-lg font-semibold text-stone-800">{t.weekPrefix}{stats.bestDay}</p>
               </div>
             </div>
           </SoftCard>
 
           <SoftCard>
-            <h3 className="text-lg font-semibold text-stone-800 mb-3">洞察</h3>
+            <h3 className="text-lg font-semibold text-stone-800 mb-3">{t.insightsLabel}</h3>
             <div className="space-y-3">
               <InsightMessageCard
-                message={`這週平均精力容量為 ${stats.avgCapacity.toFixed(1)}，${
-                  stats.avgCapacity >= 7 ? '整體狀態不錯！' : '記得適時休息。'
-                }`}
+                message={t.insightAvg(stats.avgCapacity.toFixed(1), stats.avgCapacity >= 7)}
                 variant="emerald"
               />
               {stats.overloadDays > 0 && (
                 <InsightMessageCard
-                  message={`有 ${stats.overloadDays} 天超載了。試著在超載隔天安排輕鬆的任務🫂。`}
+                  message={t.insightOverload(stats.overloadDays)}
                   variant="amber"
                 />
               )}
@@ -129,9 +126,7 @@ export function InsightsPage() {
         </>
       ) : (
         <SoftCard>
-          <p className="text-sm text-stone-400 text-center py-8">
-            還沒有足夠的資料 🌱 使用幾天之後就能看到週報了
-          </p>
+          <p className="text-sm text-stone-400 text-center py-8">{t.noData}</p>
         </SoftCard>
       )}
     </div>
