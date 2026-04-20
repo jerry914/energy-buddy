@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig({
-  base: '/energy-buddy/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/energy-buddy/' : '/',
   plugins: [react(), tailwindcss()],
-})
+}))
