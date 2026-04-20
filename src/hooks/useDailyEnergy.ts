@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, todayStr, getSettings } from '../db/database'
-import type { AppSettings } from '../models/types'
+import { DEFAULT_SETTINGS, type AppSettings } from '../models/types'
 import { calcPredictedEnergy } from '../logic/energyCalculator'
 
 export function useDailyEnergy() {
@@ -13,7 +13,7 @@ export function useDailyEnergy() {
   )
 
   const settings = useLiveQuery(
-    () => getSettings(),
+    () => db.settings.get(1),
     []
   )
 
@@ -33,7 +33,7 @@ export function useDailyEnergy() {
   return {
     energy: energy ?? null,
     needsCheckIn: energy !== undefined && !energy,
-    settings: settings ?? null,
+    settings: settings ?? DEFAULT_SETTINGS,
     checkIn,
   }
 }

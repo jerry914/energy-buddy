@@ -19,13 +19,17 @@ class EnergyBuddyDB extends Dexie {
 
 export const db = new EnergyBuddyDB()
 
-export async function getSettings(): Promise<AppSettings> {
-  let settings = await db.settings.get(1)
-  if (!settings) {
+export async function ensureDefaults(): Promise<void> {
+  const existing = await db.settings.get(1)
+  if (!existing) {
     await db.settings.put(DEFAULT_SETTINGS)
-    settings = DEFAULT_SETTINGS
   }
-  return settings
+}
+
+ensureDefaults()
+
+export async function getSettings(): Promise<AppSettings> {
+  return (await db.settings.get(1)) ?? DEFAULT_SETTINGS
 }
 
 export function todayStr(): string {
